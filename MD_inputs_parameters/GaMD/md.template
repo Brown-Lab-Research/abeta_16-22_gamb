@@ -1,0 +1,129 @@
+# Example NAMD input for NPT simulation for a solvated protein
+# Drude polarizable FF
+# Temperature & pressure control using Langevin
+# Start dynamics
+
+#######################################################
+#    PDB, PSF, PAR, VEL & INPUT PARAMETERS
+#######################################################
+structure       <BASE>_c36.psf
+coordinates     <BASENAME>.coor
+velocities      <BASENAME>.vel 
+extendedSystem  <BASENAME>.xsc
+
+parameters      /projects/lemkul_lab/charmm/toppar/par_all36m_prot.prm
+parameters      /projects/lemkul_lab/charmm/toppar/toppar_water_ions_standalone.str
+parameters      /projects/lemkul_lab/charmm/toppar/par_all36_na.prm
+parameters      /projects/lemkul_lab/charmm/toppar/stream/prot/toppar_all36_prot_na_combined.str
+paraTypeCharmm  on 
+mergeCrossterms yes   # To include CMAP correction
+
+######################################################
+# OUTPUT FILES
+######################################################
+
+binaryoutput    no
+binaryrestart   no 
+
+outputname      <BASE>_c36_<CURR> 
+dcdfile         <BASE>_c36_<CURR>.dcd
+restartname     <BASE>_c36_<CURR>.rst
+
+seed            12345
+#temperature     278.0
+timestep        2.0
+stepspercycle   20    # number of steps before making new pairlist
+
+######################################################
+# OUTPUT PARAMETERS
+######################################################
+outputEnergies  5000 # display every 10 ps
+outputTiming    5000 # display every 10 ps
+xstFreq         5000 # save every 10 ps
+dcdFreq         5000 # save every 10 ps
+restartfreq     5000 # update restart file every 10 ps
+
+rigidBonds      all
+rigidTolerance  0.00001
+rigidIterations 100
+useSettle       on
+
+## Use Drude polarizable model
+#c36           on
+#c36Temp       1
+#c36HardWall   on
+#c36Damping    20.0
+#c36BondLen    0.2
+#c36BondConst  40000 
+
+#c36NbtholeCut 5.0
+
+######################################################
+# Temperature & Pressure Control
+######################################################
+Langevin                on
+LangevinDamping         5.0
+LangevinTemp            310.0
+LangevinPiston          on
+langevinPistonTarget    1.01325      # pressure in bar -> 1 atm
+langevinPistonPeriod    200.         # oscillation period around 200 fs
+langevinPistonDecay     100.         # oscillation decay time of 100 fs
+langevinPistonTemp      310.0        # coupled to heat bath
+
+######################################################
+# NONBOND CUTOFF
+######################################################
+## NOTE: the CHARMM36 force field uses force-switching
+## (vdwForceSwitching on) but the Drude model does NOT!
+## Drude uses a potential energy switch, so make sure to
+## specify these next options exactly as they are here.
+switching       on
+cutoff          12.0
+switchdist      10.0
+pairlistdist    16.0
+
+exclude         scaled1-4
+1-4scaling      1.0
+dielectric      1.0
+
+######################################################
+# CELL PARAMETERS
+######################################################
+
+useFlexibleCell   no
+useGroupPressure  yes
+cellOrigin 0 0 0 
+wrapAll on
+MARGIN  5.0
+
+######################################################
+# PMEwald
+######################################################
+PME yes
+PMEGridSizeX 72
+PMEGridSizeY 72
+PMEGridSizeZ 72
+
+#######################################
+## GAMD                                
+#######################################
+accelMD                  on            
+accelMDdual              on 
+accelMDdihe              on
+accelMDG                 on            
+accelMDGiE               1             
+accelMDGRestart          on            
+accelMDGcMDSteps         0             
+accelMDGEquiSteps        0             
+accelMDGcMDPrepSteps     0             
+accelMDGEquiPrepSteps    0             
+accelMDOutFreq           5000
+
+accelMDGStatWindow       200000
+
+accelMDGsigma0P          6.0           
+accelMDGsigma0D          6.0           
+accelMDGRestartfile      <BASENAME>.rst.gamd
+
+# Run for 10.0 ns
+run 5000000 

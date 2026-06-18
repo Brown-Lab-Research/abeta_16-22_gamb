@@ -1,0 +1,1 @@
+-crd tetramer_c36_0.crd -psf tetramer_c36.psf -toppar toppar_c36.str -state tetramer_c36_0.rst -firststride 1 -runtime 10000 -nstride 500 -dt 2 -savefreq 10 -printfreq 10 -temp 310 -outname tetramer_c36
