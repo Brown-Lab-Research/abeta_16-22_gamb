@@ -1,0 +1,82 @@
+* calculate strand orientation in a system with multiple protein chains
+*
+
+! set some top-level variables
+set seg1    PROA
+set seg2    PROB
+set seg3    PROC
+set seg4    PROD
+set nseg    4
+
+! force field
+stream ../toppar.str
+!set toppar /home/lgilpineda/Desktop/brown_lab/4-mer/toppar
+!read rtf  card name @toppar/top_all36_prot.rtf
+!read para card name @toppar/par_all36m_prot.prm
+
+! topology
+open read unit 10 card name tetramer_c36_noions_prod_5000.psf
+read psf unit 10 card
+close unit 10 
+
+! trajectory
+open read unit 13 file name full_nowat_noions_prod_5000.dcd
+traj query unit 13
+
+! output
+open write unit 20 card name orient.dat
+write title unit 20
+*# Time Seg1 Seg2 MIND ANGLE 
+*
+
+! loop over every trajectory frame
+traj firstu 13 nunit 1 start 1 stop ?NFILE skip 1
+
+set i 1
+label trjloop
+
+    traj read
+    calc time = 0.01 * @i   ! assumes 10-ps frame saving interval
+
+    ! loop over protein segments - check for C-alpha contacts within 4.5 A
+    set npairs 0    ! number of neighboring strand pairs for which we do the calculations
+
+    ! initialize an array that will store the angles between vectors
+    set j 1
+    label segloop
+
+        calc k = @j + 1 ! avoid looping over duplicate segments
+        label segloop2
+            coor mind sele segid @seg@@j .and. type CA end mass -
+                      sele segid @seg@@k .and. type CA end mass
+
+            ! if they are close enough, actually do the calculation
+            ! UPDATE - using custom CHARMM that saves angles between two axes
+            if ?MIND .le. 4.5 then
+                incr npairs by 1    ! we have found two neighboring peptides
+
+                coor axis sele segid @seg@@j .and. resi 7 .and. type CA end -
+                          sele segid @seg@@j .and. resi 13 .and. type CA end
+
+                coor axis sele segid @seg@@k .and. resi 7 .and. type CA end -
+                          sele segid @seg@@k .and. resi 13 .and. type CA end
+
+                ! ?APHI is custom output from CHARMM - calculated internally
+                echu 20
+                echo @time @seg@@j @seg@@k ?MIND ?APHI
+                echu 
+            endif
+
+            incr k by 1
+        if @k .le. @nseg goto segloop2
+
+        incr j by 1
+    if @j .lt. @nseg goto segloop
+
+    incr i by 1
+if @i .le. ?NFILE then goto trjloop
+
+close unit 20
+close unit 13
+
+stop
